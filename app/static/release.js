@@ -1,0 +1,8 @@
+const publication={pending:false};
+const releaseError=document.getElementById('release-error');
+async function releasePost(endpoint,body){if(publication.pending)return;publication.pending=true;const buttons=[...document.querySelectorAll('button')];buttons.forEach(b=>b.disabled=true);releaseError.hidden=false;releaseError.textContent='核验中…';try{const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const record=await response.json();if(!response.ok)throw new Error(record.detail||'核验失败，请重试');location.assign(location.pathname+'?run='+record.manifest.run_id);}catch(error){releaseError.textContent=error.message;buttons.forEach(b=>b.disabled=false);}finally{publication.pending=false;}}
+function releaseInput(){const form=document.getElementById('release-form');if(!form)return{sample:'dirty'};const fields=new FormData(form);const payload={params:{threshold:Number(fields.get('threshold'))}};if(fields.get('csv').trim())payload.csv=fields.get('csv');else payload.sample=fields.get('sample');return payload;}
+document.getElementById('release-form')?.addEventListener('submit',event=>{event.preventDefault();releasePost('/api/batches',releaseInput());});
+document.getElementById('run-release').addEventListener('click',()=>releasePost('/api/batches',releaseInput()));
+document.getElementById('print-release').addEventListener('click',()=>window.print());
+document.getElementById('approve-release')?.addEventListener('click',()=>{const ctx=document.getElementById('release-context').dataset;releasePost('/api/review/'+ctx.run,{revision:Number(ctx.revision)});});
